@@ -3,7 +3,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610271600",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
+<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610272000",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
 </head><body>
 <title>발전소 사고 시나리오</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -676,9 +676,27 @@ const DGS={
    if(ok)return["복구 완료","고장 구간만 떼어 내고 구간 1은 변전소에서, 구간 3은 이웃 선로에서 받고 있어요. 이게 정답이에요.","good"];
    if(msg)return["보호 동작",msg+" 고장 구간 양쪽 구분개폐기를 먼저 열어 보세요.","bad"];
    const n=["s1","s3"].filter(x=>lv.has(x)).length;return[n?"일부 복구":"정전 중",n?"한 구간이 살아났어요. 나머지 건전 구간도 살릴 방법을 찾아보세요.":"구간 2에서 고장이 나 리클로저가 끊었어요. 고장 구간만 분리하고 나머지를 살려 보세요.","warn"]},
-  P:{"고장 직후":{},"정답 보기":{sw1:0,sw2:0,rcl:1,tie:1}}}
+  P:{"고장 직후":{},"정답 보기":{sw1:0,sw2:0,rcl:1,tie:1}}},
+ rcv:{name:"수전설비·비상발전기",tg:"etc",h:316,desc:"정수장·가스기지·사옥처럼 한전 22.9kV로 전기를 받는 시설의 대표 구조예요. 정전되면 비상발전기가 ATS를 거쳐 비상 모선을 이어받아요.",
+  N:[{id:"grid",k:"src",x:20,y:10,w:140,h:32,l:"한전 22.9kV",t:"rcv",on:1},{id:"vcb",k:"cb",x:82,y:54,l:"수전 차단기",t:"c-vcb",on:1},
+     {id:"tr",k:"tx",x:20,y:82,w:140,h:32,l:"변압기 → 380V",t:"rcv"},{id:"acb",k:"cb",x:82,y:126,l:"저압 주차단기",t:"52",on:1},
+     {id:"gen",k:"src",x:200,y:82,w:140,h:32,l:"비상발전기",t:"emgen",on:0},
+     {id:"bus",k:"bus",x:20,y:162,w:140,l:"상용 모선",t:"rcv"},
+     {id:"off",k:"load",x:20,y:174,w:60,h:30,l:"사무실",t:"f-mccb"},{id:"hvac",k:"load",x:100,y:174,w:60,h:30,l:"냉난방",t:"f-mccb"},
+     {id:"atsn",k:"cb",x:82,y:214,l:"ATS 상용측",t:"ats",on:1},{id:"atse",k:"cb",x:262,y:214,l:"ATS 비상측",t:"ats",on:0},
+     {id:"ebus",k:"bus",x:20,y:254,w:320,l:"비상 모선",t:"ats"},
+     {id:"fire",k:"load",x:20,y:270,w:96,h:30,l:"소방펌프",t:"emgen"},{id:"elt",k:"load",x:132,y:270,w:96,h:30,l:"비상조명",t:"e-elt"},{id:"proc",k:"load",x:244,y:270,w:96,h:30,l:"공정 펌프",t:"emgen"}],
+  L:[["grid","vcb"],["vcb","tr"],["tr","acb"],["acb","bus"],["bus","off"],["bus","hvac"],["bus","atsn"],["atsn","ebus"],["gen","atse"],["atse","ebus"],["ebus","fire"],["ebus","elt"],["ebus","proc"]],
+  S:(on,lv)=>{const both=on.atsn&&on.atse&&on.gen;
+   if(both&&on.grid&&lv.has("bus"))return["병렬 투입 위험","ATS 양쪽이 모두 닫혀 한전 전원과 비상발전기가 동기 확인 없이 붙었어요. 큰 전류가 흘러 발전기와 차단기가 상할 수 있어요. 실제 ATS는 인터록으로 이걸 막아요.","bad"];
+   if(both&&lv.has("tr"))return["역송전 위험","정전 중에 ATS 양쪽이 닫혀 발전기 전기가 상용 모선과 변압기를 거꾸로 올라가고 있어요"+(on.vcb?". 수전 차단기까지 닫혀 있어 한전 선로로 나가요. 복구 작업자가 감전될 수 있어요.":". 수전 차단기는 열려 있지만, 닫히는 순간 한전 선로로 나가요."),"bad"];
+   if(!lv.has("ebus"))return["비상 부하 정전",on.grid?"ATS가 어느 쪽에도 닫혀 있지 않아요. 상용측을 닫아 보세요.":"한전 정전이에요. 비상발전기를 켜고 ATS를 비상측으로 넘겨 보세요(상용측은 먼저 열기).","bad"];
+   if(!lv.has("bus"))return["비상발전기로 운전 중","사무실·냉난방 같은 상용 부하는 꺼져 있고 소방펌프·비상조명·공정 펌프만 발전기로 버티고 있어요. 한전 전원이 돌아오면 ATS를 상용측으로 되돌리고 발전기는 냉각 운전 뒤 정지해요.","warn"];
+   if(on.gen&&on.atse)return["발전기로 비상 모선 공급","한전 전원은 살아 있는데 비상 모선은 발전기가 맡고 있어요. 발전기 시험 운전이 끝나면 상용측으로 되돌려요.","warn"];
+   return["정상 수전","한전 22.9kV를 변압기로 380V로 낮춰 상용 모선과 비상 모선 모두에 공급하고 있어요."+(on.gen?" 발전기는 무부하로 대기 운전 중이에요.":""),"good"]},
+  P:{정상:{},"한전 정전":{grid:0},"비상 운전":{grid:0,gen:1,atsn:0,atse:1},"인터록 없을 때":{grid:0,gen:1,atsn:1,atse:1}}}
 };
-const DGORDER=["nuc","th","cc","ss","dl"];
+const DGORDER=["nuc","th","cc","ss","dl","rcv"];
 let DG=null,DGS_ST={};
 function dgList(){const w=wantTags();return DGORDER.slice().sort((a,b)=>(w&&w.has(DGS[b].tg)?1:0)-(w&&w.has(DGS[a].tg)?1:0))}
 function dgState(id){const d=DGS[id];if(!DGS_ST[id]){DGS_ST[id]={};d.N.forEach(n=>{if(n.k==="src"||n.k==="cb")DGS_ST[id][n.id]=n.on?1:0})}return DGS_ST[id]}
