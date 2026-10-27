@@ -3,7 +3,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610271126",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
+<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610271600",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
 </head><body>
 <title>발전소 사고 시나리오</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -157,6 +157,7 @@ ol.chain li.br::before{content:none}
 textarea{font-family:var(--mono);font-size:.75rem;width:100%;box-sizing:border-box;min-height:80px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg)}
 details{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 details summary{cursor:pointer;font-weight:600;font-size:.9rem}
+.lvl{background:none;border:0;padding:0}.lvl summary{font-size:.85rem;color:var(--muted);padding:4px 0 8px}
 details .in{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 footer{font-size:.76rem;color:var(--muted);display:flex;flex-direction:column;gap:4px;text-align:center}
 /* 탭바 */
@@ -185,7 +186,7 @@ button:focus-visible,.search:focus-visible,.flip:focus-visible{outline:2px solid
 <div class="wrap">
   <header style="flex-wrap:wrap"><h1 id="ttl">발전소 사고 시나리오</h1><span style="display:flex;gap:6px;align-items:center"><button class="pill" id="prefBtn" style="border:0;cursor:pointer;font:inherit;font-size:.8rem;font-weight:600"></button><span class="pill" id="streak"></span><button class="pill" id="acct" hidden style="border:0;cursor:pointer;font:inherit;font-size:.8rem;font-weight:600"></button></span></header>
   <main id="stage"></main>
-  <footer>
+  <footer id="foot">
     <span>기준: 국내 APR1400 공개 설계자료, 원안위 보고, IEEE C37.2. 송전전압·대수·설정값은 호기마다 달라서, 입사 후에는 배치받은 호기의 단선결선도와 절차서가 최종 기준이에요.</span>
   </footer>
 </div>
@@ -326,6 +327,7 @@ const TABS=[["home","홈"],["scn","시나리오"],["review","복습"],["map","�
 function renderTabs(){
   const n=rvDue().length+cdDue().length;
   $("tabs").innerHTML=TABS.map(([k,l])=>`<button data-tab="${k}" ${tab===k&&!R?'aria-current="page"':""}><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${l}${k==="review"&&n?`<span class="badge">${n>99?"99+":n}</span>`:""}</button>`).join("");
+  const f=$("foot");if(f)f.hidden=!!R||!(tab==="home"||tab==="map");
   const st=streak();$("streak").innerHTML=st?`연속 <b>${st}</b>일`:"오늘 시작해요";
 }
 function go(t){tab=t;R=null;card=null;close();render();window.scrollTo({top:0})}
@@ -339,7 +341,7 @@ const tagOf=s=>s.tg||(s._tg||(s._tg=NUCRX.test(s.title+(s.intro||"")+(s.chain||"
 const newsTag=n=>NUCRX.test((n.title||"")+(n.sum||""))?"nuc":"gen";
 const COS=[["khnp","한수원","원전·수력",["nuc","gen"]],["gencos","발전 5사","남동·중부·서부·남부·동서 (화력·복합)",["thermal","gen"]],["kepco","한전","송변전·배전",["grid","gen"]],["kps","한전KPS","발전 설비 정비",["nuc","thermal","gen"]],["etc","기타 공기업","가스공사·수자원공사·코레일 등",["etc","gen","grid"]],["all","아직 몰라요","전부 볼래요",["nuc","thermal","grid","etc","gen"]]];
 const TAGNAME={nuc:"원전",thermal:"화력·복합",grid:"송변전·배전",etc:"기타 공기업",gen:"발전소 공통"};
-let showAll=false;
+let showAll=false,scnQ="",hideDone=false;
 function wantTags(){const co=(D.pref&&D.pref.co)||[];if(!co.length)return null;const t=new Set();co.forEach(c=>{const x=COS.find(z=>z[0]===c);if(x)x[3].forEach(v=>t.add(v))});return t}
 const SCNV=()=>{const w=wantTags();return (!w||showAll)?SCN:SCN.filter(s=>w.has(tagOf(s)))};
 const nextScn=()=>SCNV().find(s=>!D.done[s.id]);
@@ -365,7 +367,7 @@ function resumeCard(){return paused?`<button class="today dash" id="resume"><spa
 function home(){
   const t=today(),nx=nextScn(),rd=rvDue().length,cd=cdDue().length,pend=Object.keys(D.rv).filter(stepOf).length;
   const scnToday=Object.values(D.done).includes(t);
-  const first=!Object.keys(D.done).length&&!D.days.length;
+  const first=!Object.keys(D.done).length;
   const week=[...Array(7)].map((_,k)=>addDays(t,k-6));
   const wd=["일","월","화","수","목","금","토"];
   $("stage").innerHTML=`${first?`<div class="guide"><b>처음이라면 이렇게 해 보세요</b><span>발전소에 사고가 났을 때 설비가 어떤 순서로 움직이는지, 보기 중에서 골라 가며 따라가요. 몰라도 괜찮아요. 고르면 바로 이유가 나오고, 모르는 단어는 눌러서 뜻을 볼 수 있어요.</span><span>하루에 시나리오 하나, 복습 몇 개면 충분해요.</span></div>`:""}
@@ -375,14 +377,14 @@ function home(){
     <button data-go="review"><span class="lamp ${rd===0&&pend?"on":""}">${rd===0&&pend?"✓":""}</span><span><span class="t">틀린 문제 복습</span><br><span class="s">${rd?`${rd}문제가 기다리고 있어요`:pend?`담아 둔 ${pend}문제는 정해진 날에 다시 나와요`:"틀린 문제가 생기면 여기에 모여요"}</span></span><span class="go">${rd?"복습":""}</span></button>
     <button data-go="cards"><span class="lamp ${cd===0&&Object.keys(D.cd).length?"on":""}">${cd===0&&Object.keys(D.cd).length?"✓":""}</span><span><span class="t">용어 카드</span><br><span class="s">${Object.keys(D.cd).length?(cd?`${cd}장 복습할 차례예요`:"오늘 볼 카드는 다 봤어요"):"새 카드 10장으로 시작해 보세요"}</span></span><span class="go">${cd||!Object.keys(D.cd).length?"열기":""}</span></button>
   </div></section>
-  <section><h2>내 학습 기록</h2><div class="bars" style="grid-template-columns:repeat(3,1fr)">
+  ${nx?`<section><h2>다음 시나리오</h2>${scnCard(nx)}</section>`:""}
+  <section><h2>내 기록</h2><div class="bars">
     <div class="bar"><span class="lbl">푼 문제</span><span class="n"><b>${D.st.a||0}</b></span></div>
     <div class="bar"><span class="lbl">정답률</span><span class="n"><b>${D.st.a?Math.round((D.st.c||0)/D.st.a*100):0}</b>%</span></div>
     <button class="bar" data-tab="wrong" style="font:inherit;text-align:left;cursor:pointer;color:var(--fg)"><span class="lbl">오답노트</span><span class="n"><b>${wrongKeys().length}</b>개 ›</span></button>
-  </div><span class="lbl" id="cloud" style="margin-top:6px">${cloudLabel()}</span></section>
-  <section><h2>이번 주</h2><div class="card" style="padding:14px 16px"><div class="week">${week.map(d=>`<span><i class="${D.days.includes(d)?"on":""}"></i>${wd[new Date(d+"T00:00:00Z").getUTCDay()]}</span>`).join("")}</div></div></section>
-  <section><h2>진도 <span class="lbl" style="font-weight:500">· ${esc(prefLabel().replace("🎯 ",""))} 기준</span></h2><div class="bars">${LV.filter(L=>SCNV().some(s=>lvOf(s)===L)).map(L=>{const g=SCNV().filter(s=>lvOf(s)===L),d=g.filter(s=>D.done[s.id]).length;return `<div class="bar"><span class="lbl">${L}</span><span class="n"><b>${d}</b> / ${g.length}</span><span class="track"><i style="width:${g.length?Math.round(d/g.length*100):0}%"></i></span></div>`}).join("")}</div></section>
-  ${nx?`<section><h2>다음 시나리오</h2>${scnCard(nx)}</section>`:""}
+  </div><div class="card" style="padding:12px 16px;gap:8px;margin-top:8px"><div class="week">${week.map(d=>`<span><i class="${D.days.includes(d)?"on":""}"></i>${wd[new Date(d+"T00:00:00Z").getUTCDay()]}</span>`).join("")}</div>
+    ${(()=>{const V=SCNV(),d=V.filter(s=>D.done[s.id]).length;return `<span class="lbl">진도 <b style="color:var(--fg)">${d}</b> / ${V.length} · ${esc(prefLabel().replace("🎯 ",""))} 기준</span><span class="track"><i style="width:${V.length?Math.round(d/V.length*100):0}%"></i></span>`})()}</div>
+  <span class="lbl" id="cloud" style="margin-top:6px">${cloudLabel()}</span></section>
   ${SB?`<section><h2>랭킹</h2><div class="card" id="rankBox" style="padding:14px 16px;gap:8px"><span class="lbl">불러오는 중…</span></div><button class="btn" data-tab="rank" style="margin-top:8px">전체 랭킹 보기</button></section>`:""}
   ${NEWS.length?`<section><h2>발전소 소식${NEWS.some(n=>!D.nr[n.id])?'<span class="newdot" aria-label="새 소식"></span>':""}</h2>${newsCard(newsSorted()[0],false)}<button class="btn" id="newsAll" style="margin-top:8px">소식 전체 보기 · ${NEWS.length}개</button></section>`:""}
   <details><summary>기록 백업 · 다른 기기로 옮기기</summary><div class="in">
@@ -455,8 +457,18 @@ function scnTab(){
   const nx=nextScn();
   $("stage").innerHTML=`${resumeCard()}${nx?`<section><h2>다음 시나리오</h2>${scnCard(nx)}</section>`:`<div class="guide"><b>전부 완료했어요</b><span>틀린 단계는 복습 탭에 모여 있어요. 시나리오는 언제든 다시 풀 수 있어요.</span></div>`}
   ${wantTags()?`<div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="lbl">${showAll?"모든 분야를 보여 주고 있어요":esc(prefLabel().replace("🎯 ",""))+"에 맞는 시나리오만 보여요"}</span><button class="chip" id="toggleAll">${showAll?"내 분야만 보기":"다른 분야도 보기"}</button></div>`:""}
-  ${LV.concat([...new Set(SCN.map(lvOf))].filter(v=>!LV.includes(v))).map(L=>{const V=SCNV();const g=SCN.map((s,k)=>[s,k]).filter(([s])=>lvOf(s)===L&&V.includes(s));if(!g.length)return"";const dn=g.filter(([s])=>D.done[s.id]).length;
-    return `<section><h2>${L} · ${dn}/${g.length}</h2><div class="log">${g.map(([s,k])=>`<button data-s="${esc(s.id)}"><span class="dt">${num(k)}</span><span class="tt">${esc(s.title)}</span><span class="st ${D.done[s.id]?"done":""}">${D.done[s.id]?"완료":s.date===today()?"NEW":""}</span><span class="sb">${tagOf(s)!=="gen"?`<b style="font-weight:600">${TAGNAME[tagOf(s)]}</b> · `:""}${esc(s.sub)}</span></button>`).join("")}</div></section>`}).join("")}`;
+  <input class="search" id="scnQ" type="search" placeholder="시나리오 검색 (예: 소내정전, 변압기, 보령)" aria-label="시나리오 검색" value="${esc(scnQ)}">
+  <div class="chips"><button class="chip" id="hideDone" aria-pressed="${hideDone}">안 푼 것만 보기</button></div>
+  <div id="scnList" style="display:flex;flex-direction:column;gap:12px"></div>`;
+  scnList();
+}
+function scnList(){
+  const nx=nextScn(),V=SCNV(),qq=scnQ.trim().toLowerCase();
+  const hit=s=>!qq||[s.title,s.sub,s.intro,TAGNAME[tagOf(s)],lvOf(s)].join(" ").toLowerCase().includes(qq);
+  const html=LV.concat([...new Set(SCN.map(lvOf))].filter(v=>!LV.includes(v))).map(L=>{const all=SCN.map((s,k)=>[s,k]).filter(([s])=>lvOf(s)===L&&(qq||V.includes(s)));const dn=all.filter(([s])=>D.done[s.id]).length;
+    const g=all.filter(([s])=>hit(s)&&!(hideDone&&D.done[s.id]));if(!g.length)return"";
+    return `<details class="lvl" ${qq||(nx&&lvOf(nx)===L)?"open":""}><summary>${L} · ${dn}/${all.length}${dn===all.length?" ✓":""}</summary><div class="log">${g.map(([s,k])=>`<button data-s="${esc(s.id)}"><span class="dt">${num(k)}</span><span class="tt">${esc(s.title)}</span><span class="st ${D.done[s.id]?"done":""}">${D.done[s.id]?"완료":s.date===today()?"NEW":""}</span><span class="sb">${tagOf(s)!=="gen"?`<b style="font-weight:600">${TAGNAME[tagOf(s)]}</b> · `:""}${esc(s.sub)}</span></button>`).join("")}</div></details>`}).join("");
+  $("scnList").innerHTML=html||`<p class="empty">${qq?"검색 결과가 없어요.":"모두 풀었어요."}</p>`;
 }
 
 // ---------- 문제 실행기 (시나리오·복습·짝 구별·1분 문제 공용)
@@ -465,7 +477,7 @@ function play(){
   if(R.i>=R.items.length)return R.end();
   const p=R.items[R.i];
   const ty=p.type||"mc";
-  if(!R.order){R.order=ty==="ox"?p.o.map((x,k)=>({x,ok:k===p.a,i:k})):shuffle(p.o.map((x,k)=>({x,ok:ty==="multi"?(p.ans||[]).includes(k):k===p.a,i:k})));R.sel=[]}
+  if(!R.order){R.pick=null;R.order=ty==="ox"?p.o.map((x,k)=>({x,ok:k===p.a,i:k})):shuffle(p.o.map((x,k)=>({x,ok:ty==="multi"?(p.ans||[]).includes(k):k===p.a,i:k})));R.sel=[]}
   const many=R.items.length<=12;
   $("stage").innerHTML=`<button class="back" id="leave">← 나가기</button>
     <div class="card">${many?`<div class="dots">${R.items.map((_,k)=>`<i class="${k<=R.i?"on":""}"></i>`).join("")}</div>`:""}
@@ -478,7 +490,7 @@ function play(){
      :`<div class="${ty==="ox"?"ox":"opts"}">${R.order.map((o,k)=>`<button class="opt" data-k="${k}">${esc(o.x)}</button>`).join("")}</div>`}<div id="fb" aria-live="polite"></div>`;
 }
 function answer(k){
-  if(R.ans!==null)return;R.ans=k;const p=R.items[R.i];const ok=R.order[k].ok;if(ok)R.right++;
+  if(R.ans!==null)return;R.ans=k;R.pick=R.order[k].i;const p=R.items[R.i];const ok=R.order[k].ok;if(ok)R.right++;
   const hb=$("hint");if(hb)hb.hidden=true;
   document.querySelectorAll(".opt").forEach(b=>{const o=R.order[+b.dataset.k];b.disabled=true;if(o.ok)b.classList.add("right");else if(+b.dataset.k===k)b.classList.add("wrong")});
   finish(p,ok);
@@ -488,7 +500,9 @@ function finish(p,ok,extra){
   D.st.a=(D.st.a||0)+1;if(ok)D.st.c=(D.st.c||0)+1;
   if(!ok&&p.key&&stepOf(p.key))D.wn[p.key]=(D.wn[p.key]||0)+1;
   if(R.onAnswer)R.onAnswer(p,ok);touch();
-  $("fb").innerHTML=(extra||"")+`<div class="fb"><span class="res ${ok?"r":"w"}">${ok?"맞아요":"아니에요"}</span><p>${esc(p.e)}</p>${(p.l||[]).length?`<span class="lbl">관련 용어 눌러서 자세히</span>${chips(p.l)}`:""}${!ok&&R.kind!=="review"&&p.key?`<span class="lbl">이 문제는 오답노트와 복습에 담아 뒀어요.</span>`:""}</div>
+  const W=p.w||(p.key&&stepOf(p.key)?stepOf(p.key).st.w:null);
+  const why=!ok&&(p.type||"mc")==="mc"&&R.pick!=null&&W&&W[R.pick]?`<div class="field"><span class="lbl">내가 고른 보기</span><p><b>${esc(p.o[R.pick])}</b> — ${esc(W[R.pick])}</p></div>`:"";
+  $("fb").innerHTML=(extra||"")+`<div class="fb"><span class="res ${ok?"r":"w"}">${ok?"맞아요":"아니에요"}</span>${why}<p>${esc(p.e)}</p>${(p.l||[]).length?`<span class="lbl">관련 용어 눌러서 자세히</span>${chips(p.l)}`:""}${!ok&&R.kind!=="review"&&p.key?`<span class="lbl">이 문제는 오답노트와 복습에 담아 뒀어요.</span>`:""}</div>
     <button class="btn main" id="next" style="margin-top:12px">${R.i+1<R.items.length?"다음":"결과 보기"}</button>`;
 }
 function flowLines(s){const out=[];for(const raw of String(s.chain||"").split("\n")){const x=raw.trim();if(!x)continue;if(/^\[|^교훈/.test(x))break;out.push(x.replace(/^→\s*/,""))}return out.slice(0,5)}
@@ -769,7 +783,7 @@ function importCode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s.t
 
 // ---------- 이벤트
 document.addEventListener("click",e=>{
-  const b=e.target.closest("button,#scrim,#flipCard,.box");if(!b)return;
+  const b=e.target.closest("button,#scrim,#flipCard,.map .box");if(!b)return;
   if(b.id==="scrim"||b.id==="close")return close();
   if(b.dataset.t)return sheet(b.dataset.t);
   if(b.dataset.tab){if(R&&R.kind==="scn"&&R.i>0&&R.i<R.items.length&&R.ans===null)paused=Object.assign({},R);return go(b.dataset.tab)}
@@ -806,6 +820,7 @@ document.addEventListener("click",e=>{
     case"prefBtn":return prefSheet(false);
     case"prefSave":return savePref();
     case"toggleAll":showAll=!showAll;return scnTab();
+    case"hideDone":hideDone=!hideDone;b.setAttribute("aria-pressed",hideDone);return scnList();
     case"wrongAll":return runWrong(shuffle(wrongKeys()));
     case"pairGo":return run({kind:"pair",title:"헷갈리는 짝 구별",items:pairItems(10),end:()=>endBasic("짝 구별 끝","review")});
     case"quickGo":return run({kind:"quick",title:"1분 문제",items:quickItems(),onAnswer:(p,ok)=>{if(!ok&&p.key&&stepOf(p.key)){D.rv[p.key]={due:addDays(today(),1),n:0};save()}},end:()=>endBasic("1분 문제 끝","review")});
@@ -815,7 +830,7 @@ document.addEventListener("click",e=>{
     case"imp":{const ok=importCode($("code").value||"");$("codeMsg").textContent=ok?"기록을 불러왔어요.":"코드가 올바르지 않아요. 처음부터 끝까지 빠짐없이 붙여 넣었는지 확인해 주세요.";if(ok){render();const d=document.querySelector("details");if(d){d.open=true;$("codeMsg").textContent="기록을 불러왔어요."}}return}
   }
 });
-document.addEventListener("input",e=>{if(e.target.id==="q"){q=e.target.value;dictList()}});
+document.addEventListener("input",e=>{if(e.target.id==="q"){q=e.target.value;dictList()}if(e.target.id==="scnQ"){scnQ=e.target.value;scnList()}});
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"&&$("sheetHost").innerHTML)return close();
   if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("box")){e.preventDefault();sheet(e.target.dataset.t)}
