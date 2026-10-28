@@ -1,6 +1,8 @@
 """전체 시나리오 자동 풀이 테스트: python3 tools/test.py  (pip install playwright && playwright install chromium 필요)"""
-import asyncio,os,threading,http.server,functools
+import asyncio,sys,os,threading,http.server,functools
 from playwright.async_api import async_playwright
+try:sys.stdout.reconfigure(encoding='utf-8')
+except Exception:pass
 ROOT=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
 class H(http.server.SimpleHTTPRequestHandler):
   def log_message(self,*a):pass

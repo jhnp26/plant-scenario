@@ -10,13 +10,15 @@
 - `data.json` — `{scenarios:[], terms:{}, news:[]}`
 - `config.js` — Supabase URL·anon key(공개용, 안전). 수정 불필요.
 - `manifest.webmanifest`, `icon.svg` — PWA(홈 화면 추가).
-- `supabase.sql` — 초기 스키마 참고용(실제 DB에는 이후 마이그레이션이 더 있음).
-- `tools/validate.py` — 데이터 검사. `tools/test.py` — 브라우저로 200개 시나리오 자동 풀이 테스트.
+- DB 스키마 파일은 저장소에 없음. 실제 구조는 Supabase 프로젝트(아래 백엔드)에서 확인.
+- `tools/validate.py` — 데이터 검사(필수 필드, tg, mc의 w, OX 해설 방향, 용어 연결, 계통도·짝 구별 용어 키, 뉴스 URL).
+- `tools/test.py` — 브라우저로 전체 시나리오 자동 풀이 테스트. `tools/audit.py` — 전체 화면 점검(모든 탭·계통도·용어·복습 모드의 JS 오류와 390px 가로 넘침).
+- `tools/add_content.py batch.json` — 새 시나리오·용어·뉴스 묶음을 같은 tg 뒤에 끼워 합치고, `data.json?v=`를 자동으로 올린 뒤 검사까지 돌림. 이미 있는 id면 멈춤.
 
 ## 데이터 구조
-시나리오 `{id, lv, date, title, sub, intro, chain, steps[], tg?}`
-- `lv`: 입문|이론|기본|계통|사례|심화. `tg`: nuc|thermal|grid|etc|gen (없으면 본문으로 원자력/공통 자동 판별).
-- step: `{type?: mc|ox|multi|order, q, o[], a, ans?, e, w?, l[]}`
+시나리오 `{id, lv, tg, date, title, sub, intro, chain, steps[]}`
+- `lv`: 입문|이론|기본|계통|사례|심화. `tg`: nuc|thermal|grid|etc|gen (필수). `date`가 최근 7일이면 목록에 NEW 표시.
+- step: `{type?: mc|ox|multi|order, q, o[], a, ans?, e, w(mc 필수), l[]}`
   - mc: `a`=정답 인덱스(현재 전부 0 — 화면에서 섞어서 보여줌). `w`=보기별 '왜 틀렸나' 배열(o와 같은 길이, 정답 칸은 "") — 틀렸을 때 고른 보기의 이유를 보여줌. 새 mc 문항에도 넣을 것. 오답 보기 길이가 정답보다 눈에 띄게 짧으면 안 됨(정답 길이 티 방지).
   - ox: `o=["O 맞다","X 틀리다"]`. multi: `ans`=정답 인덱스 배열. order: `o`가 올바른 순서.
   - `e` 해설, `l` 관련 용어 키(terms에 반드시 존재).
@@ -31,8 +33,10 @@
 - 실사용자 있음(예: jsi0114 = 이 프로젝트 주인). **실DB에 테스트 계정 만들지 말 것.**
 
 ## 작업 규칙
-1. 수정 후 `python3 tools/validate.py` → `python3 tools/test.py` 통과 확인 후 commit/push.
+1. 수정 후 `python3 tools/validate.py` → `python3 tools/test.py` → (화면 코드를 고쳤으면) `python3 tools/audit.py` 통과 확인 후 commit. push는 사이트에 바로 반영되니 주인에게 확인받고.
+   - 콘텐츠 추가는 batch JSON을 만들어 `tools/add_content.py`로 합치는 것이 가장 안전함.
 2. 사실 확인: 사고 사례·수치·뉴스는 검색해서 확인. 계통도는 "공개자료 기반 대표 구조"임을 유지.
+   - 확인된 기준: 전기사업법 시행규칙 별표 3(2025.6.13 개정) 110V±6V, **220V±22V**(예전 ±13V 아님), 380V±38V, 60Hz±0.2Hz.
 3. 모바일(390px) 우선. 가로 스크롤 금지.
 4. Claude 아티팩트 버전(claude.ai/artifact/S8JjFVd8gKr6dNCZLvBh14)은 예전 사본이고, 이제 이 사이트가 본판.
 

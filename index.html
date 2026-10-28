@@ -3,7 +3,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610281000",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
+<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610281400",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
 </head><body>
 <title>발전소 사고 시나리오</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -319,6 +319,7 @@ const cdDue=()=>Object.keys(D.cd).filter(k=>T[k]&&D.cd[k].due<=today());
 function stepOf(key){const [sid,i]=key.split("#");const s=SCN.find(x=>x.id===sid);return s&&s.steps[+i]?{s,st:s.steps[+i],i:+i}:null}
 const LV=["입문","이론","기본","계통","사례","심화"];
 const lvOf=s=>s.lv||"기본";
+const isNew=s=>!!s.date&&s.date>=addDays(today(),-6)&&s.date<=today();
 
 let tab="home",R=null,paused=null,q="",termMode="dict",termCat="전체",card=null,mapS={grid:true,gen:true,edgA:true,edgB:true,aac:false};
 
@@ -437,7 +438,7 @@ function newsCard(n,full){
   const q=n.q;const cs=n.case&&SCN.find(x=>x.id===n.case);
   return `<div class="card news"><div class="meta"><span>${esc(n.date)}</span>${D.nr[n.id]?"":"<span style=\"color:var(--bad);font-weight:700\">NEW</span>"}</div><h3>${esc(n.title)}</h3><p>${esc(n.sum)}</p>
     ${n.why?`<div class="why"><span class="lbl">전기직 눈으로 보면</span><br>${esc(n.why)}</div>`:""}
-    ${n.src&&n.src.url?`<a href="${esc(n.src.url)}" target="_blank" rel="noopener">출처: ${esc(n.src.name||"기사")} ↗</a>`:""}
+    ${n.src&&/^https?:\/\//.test(n.src.url||"")?`<a href="${esc(n.src.url)}" target="_blank" rel="noopener">출처: ${esc(n.src.name||"기사")} ↗</a>`:""}
     ${q?`<div class="nq" data-news="${esc(n.id)}"><span class="lbl">한 문제</span><p style="font-weight:600">${esc(q.q)}</p>${q.o.map((o,k)=>`<button class="opt" data-nq="${esc(n.id)}|${k}">${esc(o)}</button>`).join("")}<p class="situ" hidden></p></div>`:""}
     ${cs?`<button class="btn" data-s="${esc(cs.id)}">관련 사례 시나리오 풀기</button>`:""}</div>`;
 }
@@ -467,7 +468,7 @@ function scnList(){
   const hit=s=>!qq||[s.title,s.sub,s.intro,TAGNAME[tagOf(s)],lvOf(s)].join(" ").toLowerCase().includes(qq);
   const html=LV.concat([...new Set(SCN.map(lvOf))].filter(v=>!LV.includes(v))).map(L=>{const all=SCN.map((s,k)=>[s,k]).filter(([s])=>lvOf(s)===L&&(qq||V.includes(s)));const dn=all.filter(([s])=>D.done[s.id]).length;
     const g=all.filter(([s])=>hit(s)&&!(hideDone&&D.done[s.id]));if(!g.length)return"";
-    return `<details class="lvl" ${qq||(nx&&lvOf(nx)===L)?"open":""}><summary>${L} · ${dn}/${all.length}${dn===all.length?" ✓":""}</summary><div class="log">${g.map(([s,k])=>`<button data-s="${esc(s.id)}"><span class="dt">${num(k)}</span><span class="tt">${esc(s.title)}</span><span class="st ${D.done[s.id]?"done":""}">${D.done[s.id]?"완료":s.date===today()?"NEW":""}</span><span class="sb">${tagOf(s)!=="gen"?`<b style="font-weight:600">${TAGNAME[tagOf(s)]}</b> · `:""}${esc(s.sub)}</span></button>`).join("")}</div></details>`}).join("");
+    return `<details class="lvl" ${qq||(nx&&lvOf(nx)===L)?"open":""}><summary>${L} · ${dn}/${all.length}${dn===all.length?" ✓":""}${(()=>{const n=all.filter(([s])=>isNew(s)&&!D.done[s.id]).length;return n?` · 새 시나리오 ${n}개`:""})()}</summary><div class="log">${g.map(([s,k])=>`<button data-s="${esc(s.id)}"><span class="dt">${num(k)}</span><span class="tt">${esc(s.title)}</span><span class="st ${D.done[s.id]?"done":""}">${D.done[s.id]?"완료":isNew(s)?"NEW":""}</span><span class="sb">${tagOf(s)!=="gen"?`<b style="font-weight:600">${TAGNAME[tagOf(s)]}</b> · `:""}${esc(s.sub)}</span></button>`).join("")}</div></details>`}).join("");
   $("scnList").innerHTML=html||`<p class="empty">${qq?"검색 결과가 없어요.":"모두 풀었어요."}</p>`;
 }
 
