@@ -13,6 +13,7 @@
 - DB 스키마 파일은 저장소에 없음. 실제 구조는 Supabase 프로젝트(아래 백엔드)에서 확인.
 - `tools/validate.py` — 데이터 검사(필수 필드, tg, mc의 w, OX 해설 방향, 용어 연결, 계통도·짝 구별 용어 키, 뉴스 URL).
 - `tools/test.py` — 브라우저로 전체 시나리오 자동 풀이 테스트. `tools/audit.py` — 전체 화면 점검(모든 탭·계통도·용어·복습 모드의 JS 오류와 390px 가로 넘침).
+- `.github/workflows/keepalive.yml` — 3일마다 Supabase에 읽기 요청을 보내 무료 플랜 자동 일시정지를 막음(2026-11 한 번 멈췄음). 저장소에 60일간 커밋이 없으면 GitHub가 예약 실행을 끄니, 그때는 Actions 탭에서 다시 켤 것.
 - `tools/add_content.py batch.json` — 새 시나리오·용어·뉴스 묶음을 같은 tg 뒤에 끼워 합치고, `data.json?v=`를 자동으로 올린 뒤 검사까지 돌림. 이미 있는 id면 멈춤.
 
 ## 데이터 구조
