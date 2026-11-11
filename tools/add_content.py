@@ -23,7 +23,7 @@ for s in n.get('scenarios',[]):
   S.insert((same[-1]+1) if same else len(S),s)
 d['news'].extend(n.get('news',[]))
 open(DJ,'w',encoding='utf-8',newline='\n').write(json.dumps(d,ensure_ascii=False,separators=(',',':')))
-v=(datetime.datetime.utcnow()+datetime.timedelta(hours=9)).strftime('%Y%m%d%H%M')
+v=(datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))).strftime('%Y%m%d%H%M')
 h=open(IX,encoding='utf-8').read();h2=re.sub(r'data\.json\?v=\d+',f'data.json?v={v}',h)
 open(IX,'w',encoding='utf-8',newline='\n').write(h2)
 print(f"추가: 시나리오 {len(n.get('scenarios',[]))} · 용어 {len(n.get('terms',{}))} · 뉴스 {len(n.get('news',[]))} · 캐시 버전 {v}")

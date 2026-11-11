@@ -3,7 +3,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202610281400",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
+<script>(function(){try{var x=new XMLHttpRequest();x.open("GET","data.json?v=202611110956",false);x.send();if(x.status==200)window.__DATA=JSON.parse(x.responseText)}catch(e){}})();</script>
 </head><body>
 <title>발전소 사고 시나리오</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -328,7 +328,7 @@ const TABS=[["home","홈"],["scn","시나리오"],["review","복습"],["map","�
 function renderTabs(){
   const n=rvDue().length+cdDue().length;
   $("tabs").innerHTML=TABS.map(([k,l])=>`<button data-tab="${k}" ${tab===k&&!R?'aria-current="page"':""}><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${l}${k==="review"&&n?`<span class="badge">${n>99?"99+":n}</span>`:""}</button>`).join("");
-  const f=$("foot");if(f)f.hidden=!!R||!(tab==="home"||tab==="map");
+  const f=$("foot");if(f){f.hidden=!!R||!(tab==="home"||tab==="map");const w=wantTags();f.firstElementChild.textContent=!w||w.has("nuc")?"기준: 국내 APR1400 공개 설계자료, 원안위 보고, IEEE C37.2. 송전전압·대수·설정값은 호기마다 달라서, 입사 후에는 배치받은 호기의 단선결선도와 절차서가 최종 기준이에요.":"기준: 공개 설계자료, 전기설비기술기준·KEC, 전기사업법 시행규칙, IEEE C37.2. 설비 구성과 설정값은 사업소마다 달라서, 입사 후에는 배치받은 곳의 단선결선도와 절차서가 최종 기준이에요."}
   const st=streak();$("streak").innerHTML=st?`연속 <b>${st}</b>일`:"오늘 시작해요";
 }
 function go(t){tab=t;R=null;card=null;close();render();window.scrollTo({top:0})}
@@ -345,7 +345,14 @@ const TAGNAME={nuc:"원전",thermal:"화력·복합",grid:"송변전·배전",et
 let showAll=false,scnQ="",hideDone=false;
 function wantTags(){const co=(D.pref&&D.pref.co)||[];if(!co.length)return null;const t=new Set();co.forEach(c=>{const x=COS.find(z=>z[0]===c);if(x)x[3].forEach(v=>t.add(v))});return t}
 const SCNV=()=>{const w=wantTags();return (!w||showAll)?SCN:SCN.filter(s=>w.has(tagOf(s)))};
-const nextScn=()=>SCNV().find(s=>!D.done[s.id]);
+// 목표 기업을 골랐으면 그 분야 시나리오를 단계 순으로 먼저, 공통과 번갈아 추천
+const isSp=s=>tagOf(s)!=="gen";
+const lvR=s=>{const i=LV.indexOf(lvOf(s));return i<0?9:i};
+const nextScn=()=>{const w=wantTags(),V=SCNV().filter(s=>!D.done[s.id]);if(!w||w.size>=5||showAll)return V[0];
+  const pr={};(D.pref.co||[]).forEach(c=>((COS.find(z=>z[0]===c)||[])[3]||[]).forEach((t,i)=>{pr[t]=Math.min(t in pr?pr[t]:9,i)}));
+  const sp=V.filter(isSp).sort((a,b)=>lvR(a)-lvR(b)||pr[tagOf(a)]-pr[tagOf(b)]||SCN.indexOf(a)-SCN.indexOf(b)),g=V.filter(s=>!isSp(s));
+  const dn=SCN.filter(s=>D.done[s.id]&&w.has(tagOf(s))),ds=dn.filter(isSp).length;
+  return ds<=dn.length-ds?sp[0]||g[0]:g[0]||sp[0]};
 const prefLabel=()=>{const co=(D.pref&&D.pref.co)||[];if(!co.length)return"목표 기업 선택";const n=co.map(c=>(COS.find(z=>z[0]===c)||[0,c])[1]);return "🎯 "+(n.length>2?n.slice(0,2).join("·")+" 외":n.join("·"))};
 function prefSheet(first){
   const sel=new Set((D.pref&&D.pref.co)||[]);
@@ -466,7 +473,8 @@ function scnTab(){
 function scnList(){
   const nx=nextScn(),V=SCNV(),qq=scnQ.trim().toLowerCase();
   const hit=s=>!qq||[s.title,s.sub,s.intro,TAGNAME[tagOf(s)],lvOf(s)].join(" ").toLowerCase().includes(qq);
-  const html=LV.concat([...new Set(SCN.map(lvOf))].filter(v=>!LV.includes(v))).map(L=>{const all=SCN.map((s,k)=>[s,k]).filter(([s])=>lvOf(s)===L&&(qq||V.includes(s)));const dn=all.filter(([s])=>D.done[s.id]).length;
+  const spF=wantTags()&&!showAll;
+  const html=LV.concat([...new Set(SCN.map(lvOf))].filter(v=>!LV.includes(v))).map(L=>{const all=SCN.map((s,k)=>[s,k]).filter(([s])=>lvOf(s)===L&&(qq||V.includes(s))).sort(([a,i],[b,j])=>(spF?isSp(b)-isSp(a):0)||i-j);const dn=all.filter(([s])=>D.done[s.id]).length;
     const g=all.filter(([s])=>hit(s)&&!(hideDone&&D.done[s.id]));if(!g.length)return"";
     return `<details class="lvl" ${qq||(nx&&lvOf(nx)===L)?"open":""}><summary>${L} · ${dn}/${all.length}${dn===all.length?" ✓":""}${(()=>{const n=all.filter(([s])=>isNew(s)&&!D.done[s.id]).length;return n?` · 새 시나리오 ${n}개`:""})()}</summary><div class="log">${g.map(([s,k])=>`<button data-s="${esc(s.id)}"><span class="dt">${num(k)}</span><span class="tt">${esc(s.title)}</span><span class="st ${D.done[s.id]?"done":""}">${D.done[s.id]?"완료":isNew(s)?"NEW":""}</span><span class="sb">${tagOf(s)!=="gen"?`<b style="font-weight:600">${TAGNAME[tagOf(s)]}</b> · `:""}${esc(s.sub)}</span></button>`).join("")}</div></details>`}).join("");
   $("scnList").innerHTML=html||`<p class="empty">${qq?"검색 결과가 없어요.":"모두 풀었어요."}</p>`;
